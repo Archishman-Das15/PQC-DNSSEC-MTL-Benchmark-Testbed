@@ -1,0 +1,5 @@
+# pinned = the exact versions the testbed was developed and tested with
+dnspython==2.7.0
+pycryptodome==3.23.0
+cryptography==46.0.6
+matplotlib==3.10.8

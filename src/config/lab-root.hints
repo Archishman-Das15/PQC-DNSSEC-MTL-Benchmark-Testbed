@@ -1,0 +1,14 @@
+;       This file holds the information on root name servers needed to 
+;       initialize cache of Internet domain name servers
+;       (e.g. reference this file in the "cache  .  <file>"
+;       configuration file of BIND domain name servers). 
+; 
+;       This file is made available by InterNIC 
+;
+; ---- PS-036 LAB ROOT HINTS (derived from the IANA file above) ----
+; The lab root server replaces the 13 Internet root servers so that the
+; resolver performs real priming + iterative resolution inside the testbed.
+;
+.                        3600000      NS    A.ROOT-SERVERS.LAB.
+A.ROOT-SERVERS.LAB.      3600000      A     172.30.53.10
+; End of file

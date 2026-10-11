@@ -1,0 +1,9 @@
+{
+  "dataset": "large",
+  "base_hosts": 10000,
+  "generation": 0,
+  "mode": "mtl",
+  "hosts": 10000,
+  "serial": 1791538443,
+  "signed_at": 1791538443
+}

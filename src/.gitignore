@@ -1,0 +1,24 @@
+# Python bytecode and runtime caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.cache/
+
+# Large offline Docker archive (>100MB exceeds GitHub push limit)
+*.tar.gz
+*.tar
+
+# OS and Editor artifacts
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/

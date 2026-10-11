@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PQC-DNSSEC MTL Benchmark Testbed — RootOps (A3-PS036-TC023)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/vendor/xterm.css">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <!-- Initial Welcome / Intro Screen Overlay (First thing user sees on launch) -->
+  <div id="intro-screen" class="intro-screen-overlay">
+    <div class="intro-modal-card">
+      <div class="intro-header">
+        <div class="intro-badges">
+          <span class="intro-ps-tag">PS-036</span>
+          <span class="intro-team-tag">TEAM: ROOTOPS (A3-PS036-TC023)</span>
+          <span class="intro-spec-tag">Domain: CyberSecurity</span>
+        </div>
+        <div class="intro-header-actions">
+          <button id="intro-fullscreen-btn" class="intro-action-btn" onclick="toggleFullScreen()" title="Toggle Fullscreen (Opens fullscreen by default)">⛶ Fullscreen</button>
+          <button class="intro-close-btn" onclick="dismissIntroScreen()" title="Proceed to Testbed Workbench (Esc / Enter)">✕</button>
+        </div>
+      </div>
+
+      <div class="intro-body">
+        <div class="intro-section">
+          <div class="intro-label">📌 PROBLEM STATEMENT</div>
+          <h2 class="intro-title">Post-Quantum Cryptography in DNSSEC: Signature Size Bloat &amp; Latency</h2>
+          <div class="intro-summary-list">
+            <div class="intro-summary-item">
+              <span class="summary-bullet">⚠️</span>
+              <div><strong>Signature Inflation:</strong> ML-DSA-44 signatures expand to <strong>2,420 bytes</strong> vs classical ECDSA (64B) — a 38× size bloat.</div>
+            </div>
+            <div class="intro-summary-item">
+              <span class="summary-bullet">⚠️</span>
+              <div><strong>Packet Fragmentation:</strong> Exceeds DNS standard 1,232-byte UDP buffer, triggering expensive TCP fallbacks and amplification risks.</div>
+            </div>
+            <div class="intro-summary-item">
+              <span class="summary-bullet">⚠️</span>
+              <div><strong>Resolver Congestion:</strong> Drastically increases cache footprint, memory overhead, and verification latency.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="intro-section">
+          <div class="intro-label">💡 OUR SOLUTION</div>
+          <h3 class="intro-solution-name">RootOps: Merkle Tree Ladder (MTL) PQC-DNSSEC Testbed</h3>
+          <p class="intro-text">
+            Standard-compliant zone condensation combining <strong>Merkle Tree Ladder Mode</strong> (IETF CFRG draft) with <strong>ML-DSA-44</strong> (Alg 201).
+          </p>
+          <div class="intro-highlights-grid">
+            <div class="intro-highlight-item">
+              <div class="hl-icon">⚡</div>
+              <div class="hl-content">
+                <strong>92% Signature Size Reduction</strong>
+                <span>Only 1 root signature per zone. RRSIGs carry compact ~190B ladder paths fitting inside 1,232B UDP MTU.</span>
+              </div>
+            </div>
+            <div class="intro-highlight-item">
+              <div class="hl-icon">🌐</div>
+              <div class="hl-content">
+                <strong>5-Tier Delegation Chain</strong>
+                <span>Isolated Docker hierarchy: Root (<code>.</code>) → TLD (<code>test.</code>) → SLD (<code>aiori3.test.</code>), PowerDNS Recursor 5.3, and PQC client.</span>
+              </div>
+            </div>
+            <div class="intro-highlight-item">
+              <div class="hl-icon">🔄</div>
+              <div class="hl-content">
+                <strong>Dynamic Zone Evolution</strong>
+                <span>Resolvers validate records across updates using cached ladders without re-signing the entire zone.</span>
+              </div>
+            </div>
+            <div class="intro-highlight-item">
+              <div class="hl-icon">📊</div>
+              <div class="hl-content">
+                <strong>Empirical Benchmark Suite</strong>
+                <span>Live measurements of crypto latency, UDP/TCP query sizes, ladder endurance, and PQC chain validation.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="intro-footer-meta">
+          <div class="intro-meta-item">
+            <span class="meta-label">Student Members:</span>
+            <span class="meta-val">Archishman Das, Sampurnaa Nag</span>
+          </div>
+          <div class="intro-meta-item">
+            <span class="meta-label">Faculty Mentor:</span>
+            <span class="meta-val">Prof. (Dr.) Indrajit De</span>
+          </div>
+          <div class="intro-meta-item">
+            <span class="meta-label">Institutions:</span>
+            <span class="meta-val">IEM Kolkata • AIORI</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="intro-actions">
+        <button class="btn btn-intro-proceed" id="btn-enter-workbench" onclick="dismissIntroScreen()">
+          <span>🚀 Enter Testbed Workbench</span>
+          <span class="btn-subtext">Proceed to live topology, DNS controls &amp; interactive terminal</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Titlebar: Project Title, Team Info, Dark Mode Toggle, and Partner Logos -->
+  <header class="app-titlebar">
+    <div class="titlebar-left">
+      <div class="project-branding">
+        <h1 class="project-title">PQC-DNSSEC MTL Benchmark Testbed</h1>
+        <span class="project-tag">PS-036 Evaluation</span>
+      </div>
+      <div class="team-meta">
+        <div class="meta-pill">
+          <span class="pill-label">Team:</span>
+          <span class="pill-value">RootOps</span>
+        </div>
+        <div class="meta-pill">
+          <span class="pill-label">Team ID:</span>
+          <span class="pill-value">A3-PS036-TC023</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center Control Buttons: Intro Modal, Fullscreen, and Theme Toggle -->
+    <div class="titlebar-center">
+      <button id="intro-btn" class="theme-toggle-btn" onclick="openIntroScreen()" title="View Problem Statement, Solution Details, and Overview">
+        <span>ℹ️</span>
+        <span>PS-036 Intro</span>
+      </button>
+      <button id="fullscreen-toggle" class="theme-toggle-btn" onclick="toggleFullScreen()" title="Toggle Fullscreen Mode">
+        <span id="fullscreen-icon">⛶</span>
+        <span id="fullscreen-text">Fullscreen</span>
+      </button>
+      <button id="theme-toggle" class="theme-toggle-btn" onclick="toggleTheme()" title="Switch between Light and Dark color themes">
+        <span id="theme-icon">🌙</span>
+        <span id="theme-text">Dark Mode</span>
+      </button>
+    </div>
+
+    <!-- Institutional Logos: IEM-UEM and AIORI at the right end -->
+    <div class="titlebar-logos">
+      <div class="logo-card" title="Institute of Engineering &amp; Management and University of Engineering &amp; Management (IEM-UEM)">
+        <img src="/logos/iemuem.png" alt="IEM-UEM Logo" class="brand-logo brand-logo-combined">
+      </div>
+      <div class="logo-card" title="Advanced Internet Operations Research in India (AIORI)">
+        <img src="/logos/aiori.png" alt="AIORI Logo" class="brand-logo">
+      </div>
+    </div>
+  </header>
+
+  <!-- Secondary Operational Bar: Live Telemetry & Quick Action Buttons -->
+  <div class="app-toolbar">
+    <div class="toolbar-telemetry">
+      <div class="telemetry-item" id="hdr-mode-item">
+        <span class="telemetry-label">ZONE MODE</span>
+        <span class="telemetry-value" id="hdr-mode">LOADING...</span>
+      </div>
+      <div class="telemetry-item">
+        <span class="telemetry-label">AUTH HIERARCHY</span>
+        <span class="telemetry-value" id="hdr-auth">3 / 3</span>
+      </div>
+      <div class="telemetry-item">
+        <span class="telemetry-label">RECURSOR (5.3)</span>
+        <span class="telemetry-value" id="hdr-recursor">CHECKING...</span>
+      </div>
+      <div class="telemetry-item">
+        <span class="telemetry-label">CLIENT (100)</span>
+        <span class="telemetry-value" id="hdr-client">CHECKING...</span>
+      </div>
+    </div>
+
+    <div class="toolbar-actions">
+      <button class="btn btn-secondary" onclick="sendCmd('./tb.sh status')" title="Check status and health of all testbed Docker containers">Status</button>
+      <button class="btn btn-secondary" onclick="sendCmd('./tb.sh test')" title="Run DNS test queries and verify PQC trust chain">Run Test</button>
+      <button class="btn btn-secondary" onclick="sendCmd('./tb.sh reload')" title="Reload PowerDNS authoritative zone files">Reload Auth</button>
+      <button class="btn btn-secondary" onclick="sendCmd('./tb.sh flush')" title="Purge cached DNS records and Merkle ladders from resolver">Flush Cache</button>
+    </div>
+  </div>
+
+  <!-- Main Split Layout -->
+  <main class="workbench-container" id="workbench-container">
+    <!-- Left Pane: Workbench Controls, Diagnostics, Benchmarks, Metrics -->
+    <section class="workbench-panel" id="workbench-panel">
+      <!-- Section Navigation Tabs -->
+      <nav class="panel-tabs">
+        <button class="tab-btn active" data-tab="tab-topology" title="View Docker container hierarchy, IP addresses, and CPU pinning">Topology</button>
+        <button class="tab-btn" data-tab="tab-signing" title="Configure signing algorithm (MTL / ML-DSA-44) and sign zones">Zone Signing</button>
+        <button class="tab-btn" data-tab="tab-diagnostics" title="Execute dig queries and validate PQC DNSSEC trust chains">Diagnostics</button>
+        <button class="tab-btn" data-tab="tab-benchmarks" title="Run cryptographic benchmarks, live DNS tests, and endurance benchmarks">Benchmarks</button>
+        <button class="tab-btn" data-tab="tab-metrics" title="View parsed benchmark measurement tables and results comparison">Metrics</button>
+        <button class="tab-btn" data-tab="tab-figures" title="View benchmark visualization charts, plots, and report markdown">Figures</button>
+        <button class="tab-btn" data-tab="tab-about" title="View project contributors, faculty guide, team info, and research overview">About</button>
+      </nav>
+
+      <!-- Panel Body: Tab Contents -->
+      <div class="panel-content">
+
+        <!-- TAB 1: TOPOLOGY & LIFECYCLE -->
+        <div id="tab-topology" class="tab-pane active">
+          <div class="section-block">
+            <div class="section-title">CONTAINER DELEGATION CHAIN &amp; SERVICES</div>
+            <div class="section-desc">Isolated lab network (172.30.53.0/24) running full DNSSEC hierarchy with PowerDNS.</div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Node</th>
+                  <th>IP Address</th>
+                  <th>Service Role</th>
+                  <th>State</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="topology-tbody">
+                <tr><td colspan="5" class="text-muted">Inspecting containers...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="section-block">
+            <div class="section-title">CLUSTER LIFECYCLE CONTROLS</div>
+            <div class="btn-group">
+              <button class="btn btn-primary" onclick="sendCmd('./tb.sh up')" title="Start all 5 Docker containers and initialize network">Start Testbed (tb.sh up)</button>
+              <button class="btn btn-secondary" onclick="sendCmd('./tb.sh down')" title="Stop and tear down all testbed containers">Stop Testbed (tb.sh down)</button>
+              <button class="btn btn-secondary" onclick="sendCmd('./tb.sh reload')" title="Reload authoritative zone configurations without full restart">Reload Auth Servers</button>
+              <button class="btn btn-secondary" onclick="sendCmd('./tb.sh flush')" title="Purge all cached DNS entries from PowerDNS recursor">Flush Resolver Cache</button>
+              <button class="btn btn-danger" onclick="sendCmd('./tb.sh clean')" title="Delete all generated zone files, keys, and verifier state">Clean Zones &amp; Keys</button>
+            </div>
+          </div>
+
+          <div class="section-block">
+            <div class="section-title">CPU PINNING ASSIGNMENTS</div>
+            <div class="section-desc">Pinned core mapping defined in .env for low-variance benchmark results.</div>
+            <div class="env-grid" id="env-pinning-grid">
+              <div class="env-item"><span class="env-label">AUTH_CPUS</span><span class="env-val" id="pin-auth">0</span></div>
+              <div class="env-item"><span class="env-label">RESOLVER_CPUS</span><span class="env-val" id="pin-rec">1</span></div>
+              <div class="env-item"><span class="env-label">CLIENT_CPUS</span><span class="env-val" id="pin-client">2</span></div>
+              <div class="env-item"><span class="env-label">BENCH_CPUS</span><span class="env-val" id="pin-bench">3</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: ZONE SIGNING & EVOLUTION -->
+        <div id="tab-signing" class="tab-pane">
+          <div class="section-block">
+            <div class="section-title">ZONE SIGNING ENGINE</div>
+            <div class="section-desc">
+              Signs root (.), tld (lab.), and sld (aiori3.test.). KSK is ECDSA P-256 (Alg 13); ZSK is either pure ML-DSA-44 or MTL + ML-DSA-44.
+            </div>
+
+            <form class="form-grid" onsubmit="event.preventDefault(); triggerSigning();">
+              <div class="form-group">
+                <label class="form-label">Algorithm Mode</label>
+                <div class="radio-row">
+                  <label class="radio-label">
+                    <input type="radio" name="sign_mode" value="mtl" checked>
+                    <span>MTL + ML-DSA-44 (Alg 201)</span>
+                  </label>
+                  <label class="radio-label">
+                    <input type="radio" name="sign_mode" value="mldsa44">
+                    <span>ML-DSA-44 Baseline (Alg 200)</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Dataset Size (Host RRsets in aiori3.test)</label>
+                <div class="radio-row">
+                  <label class="radio-label">
+                    <input type="radio" name="sign_ds" value="small" checked>
+                    <span>small (100 hosts)</span>
+                  </label>
+                  <label class="radio-label">
+                    <input type="radio" name="sign_ds" value="medium">
+                    <span>medium (1,000 hosts)</span>
+                  </label>
+                  <label class="radio-label">
+                    <input type="radio" name="sign_ds" value="large">
+                    <span>large (10,000 hosts)</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary" title="Sign all zones (., lab., aiori3.test.) with chosen algorithm and reload">Sign Hierarchy &amp; Reload</button>
+                <button type="button" class="btn btn-secondary" onclick="sendCmd('./tb.sh test')" title="Test DNSSEC chain validation from client to root">Verify Chain (tb.sh test)</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="section-block">
+            <div class="section-title">ZONE EVOLUTION &amp; BACKWARD COMPATIBILITY (MTL)</div>
+            <div class="section-desc">
+              Simulates zone expansion. With MTL, existing resolvers can reuse cached ladders, while new records require fetching updated ladder nodes.
+            </div>
+            <div class="form-inline">
+              <label class="form-label">Add Host RRsets:</label>
+              <input type="number" id="evolve-count" value="50" min="1" max="1000" class="input-text" style="width: 80px;">
+              <button class="btn btn-secondary" onclick="triggerEvolve()" title="Add host records to zone and simulate ladder evolution">Evolve Series (tb.sh evolve)</button>
+              <button class="btn btn-secondary" onclick="sendCmd('./tb.sh demo-evolve')" title="Run automated demonstration of zone evolution and backward compatibility">Run Evolution Demo (tb.sh demo-evolve)</button>
+            </div>
+          </div>
+
+          <div class="section-block">
+            <div class="section-title">ACTIVE SIGNING METADATA</div>
+            <div class="metadata-box" id="sign-metadata-box">
+              <div class="meta-row"><span class="meta-key">Mode:</span><span class="meta-val" id="meta-mode">loading...</span></div>
+              <div class="meta-row"><span class="meta-key">Dataset:</span><span class="meta-val" id="meta-ds">loading...</span></div>
+              <div class="meta-row"><span class="meta-key">Host RRsets:</span><span class="meta-val" id="meta-hosts">loading...</span></div>
+              <div class="meta-row"><span class="meta-key">Signed Zones:</span><span class="meta-val" id="meta-zones">loading...</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 3: DIAGNOSTICS & VALIDATION -->
+        <div id="tab-diagnostics" class="tab-pane">
+          <div class="section-block">
+            <div class="section-title">INTERACTIVE CLIENT DNS QUERY</div>
+            <div class="section-desc">
+              Executes dig inside the client container against the PowerDNS Recursor (172.30.53.53).
+            </div>
+
+            <div class="form-grid">
+              <div class="form-row-split">
+                <div class="form-group">
+                  <label class="form-label">Target Domain Name</label>
+                  <input type="text" id="diag-name" class="input-text" value="host00001.aiori3.test" list="domain-presets">
+                  <datalist id="domain-presets">
+                    <option value="host00001.aiori3.test">
+                    <option value="host00042.aiori3.test">
+                    <option value="www.aiori3.test">
+                    <option value="aiori3.test">
+                    <option value="lab.">
+                    <option value="_mtlladder.aiori3.test">
+                  </datalist>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Record Type</label>
+                  <select id="diag-type" class="input-select">
+                    <option value="A" selected>A</option>
+                    <option value="TXT">TXT</option>
+                    <option value="DNSKEY">DNSKEY</option>
+                    <option value="DS">DS</option>
+                    <option value="SOA">SOA</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Query Flags</label>
+                <div class="checkbox-row">
+                  <label class="checkbox-label"><input type="checkbox" id="flag-dnssec" checked> +dnssec</label>
+                  <label class="checkbox-label"><input type="checkbox" id="flag-multi" checked> +multi</label>
+                  <label class="checkbox-label"><input type="checkbox" id="flag-tcp"> +tcp</label>
+                  <label class="checkbox-label"><input type="checkbox" id="flag-trace"> +trace (lab root)</label>
+                </div>
+              </div>
+
+              <div class="form-actions">
+                <button class="btn btn-primary" onclick="runDigQuery()" title="Execute dig DNS query inside client container with selected flags">Execute dig</button>
+                <button class="btn btn-secondary" onclick="runValidateChain()" title="Run pqcdns.validator to check cryptographic signature chain">Validate PQC Chain</button>
+                <button class="btn btn-secondary" onclick="sendCmd('./tb.sh dig +dnssec +tcp _mtlladder.aiori3.test TXT')" title="Query _mtlladder.aiori3.test TXT record for Merkle Tree Ladder nodes">Inspect Ladder TXT</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-block">
+            <div class="section-title">DELEGATION &amp; TRUST ANCHOR VERIFICATION</div>
+            <div class="section-desc">Quick validation recipes for individual hierarchy steps.</div>
+            <div class="btn-group">
+              <button class="btn btn-secondary" onclick="sendCmd('./tb.sh dig +dnssec aiori3.test DNSKEY')" title="Query DNSKEY records for root and aiori3.test zones">Root &amp; AIORI DNSKEYs</button>
+              <button class="btn btn-secondary" onclick="sendCmd('./tb.sh dig +dnssec lab. DS')" title="Query DS record for lab. zone from root server">TLD Delegation DS</button>
+              <button class="btn btn-secondary" onclick="sendCmd('./tb.sh dig +trace @172.30.53.10 www.aiori3.test A')" title="Perform iterative trace query starting from lab root server">Trace from Lab Root</button>
+              <button class="btn btn-secondary" onclick="sendCmd('./tb.sh validate host00001.aiori3.test www.aiori3.test')" title="Validate trust chain for test domains (host00001, www)">Full Trust Chain</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 4: BENCHMARK SUITE -->
+        <div id="tab-benchmarks" class="tab-pane">
+          <div class="section-block">
+            <div class="section-title">OFFLINE CRYPTOGRAPHIC BENCHMARK</div>
+            <div class="section-desc">
+              Executes pqcdns.bench_crypto on pinned CPU core. Measures zone signing time, cold verification time, underlying ML-DSA signs/verifies, and RRSIG sizes across all 3 dataset sizes.
+            </div>
+            <div class="form-inline">
+              <label class="form-label">Trials:</label>
+              <input type="number" id="crypto-trials" value="5" min="1" max="20" class="input-text" style="width: 70px;">
+              <button class="btn btn-primary" onclick="triggerBenchCrypto()" title="Run offline cryptographic benchmark for sign/verify times and signature sizes">Run Crypto Benchmark (tb.sh bench-crypto)</button>
+            </div>
+          </div>
+
+          <div class="section-block">
+            <div class="section-title">LIVE DNS WORKLOAD BENCHMARK</div>
+            <div class="section-desc">
+              Executes pqcdns.bench_dns inside client container against recursor. Measures byte overhead, TCP fallback frequency, ladder fetch count, and p50 query latency.
+            </div>
+            <div class="form-inline">
+              <label class="form-label">Trials:</label>
+              <input type="number" id="dns-trials" value="5" min="1" max="10" class="input-text" style="width: 70px;">
+              <label class="form-label">Queries/Trial:</label>
+              <input type="number" id="dns-queries" value="300" min="10" max="1000" class="input-text" style="width: 80px;">
+              <label class="checkbox-label"><input type="checkbox" id="dns-nocache"> --no-ladder-cache</label>
+              <button class="btn btn-primary" onclick="triggerBenchDns()" title="Run live DNS query benchmark against recursor measuring latency and TCP fallbacks">Run Live DNS (tb.sh bench-dns)</button>
+            </div>
+          </div>
+
+          <div class="section-block">
+            <div class="section-title">REFERENCE-VALUE ENDURANCE BENCHMARK</div>
+            <div class="section-desc">
+              Executes pqcdns.bench_endurance over randomized series expansions. Compares measured ladder endurance K against analytical bounds.
+            </div>
+            <div class="form-inline">
+              <label class="form-label">Simulated Runs:</label>
+              <input type="number" id="endurance-runs" value="200" min="10" max="500" class="input-text" style="width: 80px;">
+              <button class="btn btn-primary" onclick="triggerBenchEndurance()" title="Run randomized series expansions to measure ladder endurance K">Run Endurance (tb.sh bench-endurance)</button>
+            </div>
+          </div>
+
+          <div class="section-block">
+            <div class="section-title">FULL BENCHMARK MATRIX &amp; REPORTING</div>
+            <div class="section-desc">
+              Executes the full benchmark matrix (environment capture + crypto benchmarks + 3 sizes x 2 modes DNS benchmarks + endurance + report generation). Estimated duration: ~20-30 min.
+            </div>
+            <div class="btn-group">
+              <button class="btn btn-primary" onclick="sendCmd('./tb.sh bench-all')" title="Execute complete benchmark suite across all datasets and modes (~20-30 min)">Execute Full Suite (tb.sh bench-all)</button>
+              <button class="btn btn-secondary" onclick="sendCmd('./tb.sh report')" title="Re-parse raw benchmark results and generate REPORT.md and charts">Regenerate REPORT.md &amp; Figures</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 5: RESULTS & METRICS -->
+        <div id="tab-metrics" class="tab-pane">
+          <div class="section-block">
+            <div class="section-title">DIRECT MEASUREMENTS COMPARISON (FROM RESULTS)</div>
+            <div class="section-desc">Directly parsed from results/REPORT.md. Compares ML-DSA-44 baseline vs MTL mode.</div>
+            <div id="metrics-tables-container">
+              <div class="text-muted">Loading metrics data...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 6: FIGURES & PLOTS -->
+        <div id="tab-figures" class="tab-pane">
+          <div class="section-block">
+            <div class="section-title">BENCHMARK PLOTS &amp; VISUALIZATIONS</div>
+            <div class="section-desc">Charts generated by pqcdns.report in results/figures/.</div>
+            
+            <div class="figure-selector" id="figure-selector-buttons">
+              <!-- Figure buttons populated dynamically -->
+            </div>
+
+            <div class="figure-display-box">
+              <img id="figure-active-img" src="" alt="Benchmark plot" style="display: none; max-width: 100%; border: 1px solid #d0d7de;">
+              <div id="figure-empty-msg" class="text-muted">Select a plot above or regenerate figures via tb.sh report.</div>
+            </div>
+          </div>
+
+          <div class="section-block">
+            <div class="section-title">RESULTS/REPORT.MD PREVIEW</div>
+            <button class="btn btn-secondary" onclick="toggleReportMarkdown()" title="Show or hide raw markdown content of results/REPORT.md">Toggle Raw Report Markdown</button>
+            <pre id="report-md-pre" class="code-box" style="display: none; margin-top: 10px; max-height: 400px; overflow-y: auto;"></pre>
+          </div>
+        </div>
+
+        <!-- TAB 7: ABOUT & CONTRIBUTORS -->
+        <div id="tab-about" class="tab-pane">
+          <div class="section-block">
+            <div class="section-title">PROJECT &amp; PROBLEM STATEMENT</div>
+            <div class="about-card hero-about-card">
+              <div class="about-hero-header">
+                <span class="about-badge-ps">PS-036</span>
+                <span class="about-badge-team">Team: RootOps (A3-PS036-TC023)</span>
+                <span class="about-badge-track">Domain: CyberSecurity</span>
+              </div>
+              <h2 class="about-hero-title">Benchmarking Post-Quantum Cryptography in DNSSEC via Merkle Tree Ladders (MTL)</h2>
+              <p class="about-hero-desc">
+                An end-to-end containerized empirical testbed evaluating ML-DSA-44 (NIST FIPS 204) vs. MTL-condensed ML-DSA-44 (Verisign Labs CFRG draft-harvey-cfrg-mtl-mode-09 / draft-fregly-dnsop-slh-dsa-mtl-dnssec) across a multi-tier DNS authority hierarchy.
+              </p>
+            </div>
+          </div>
+
+          <div class="section-block">
+            <div class="section-title">RESEARCH TEAM &amp; CONTRIBUTORS</div>
+            <div class="contributors-grid">
+              <!-- Student Members -->
+              <div class="contributor-card">
+                <div class="contributor-role-tag student-tag">Student Member</div>
+                <div class="contributor-avatar">👨‍💻</div>
+                <div class="contributor-name">Archishman Das</div>
+                <div class="contributor-dept">Department of Computer Science &amp; Engineering</div>
+                <div class="contributor-inst">Institute of Engineering &amp; Management (IEM), Kolkata</div>
+                <div class="contributor-details">PQC DNSSEC Architecture, Merkle Tree Ladder Implementation &amp; Benchmarking Framework</div>
+              </div>
+
+              <div class="contributor-card">
+                <div class="contributor-role-tag student-tag">Student Member</div>
+                <div class="contributor-avatar">👩‍💻</div>
+                <div class="contributor-name">Sampurnaa Nag</div>
+                <div class="contributor-dept">Department of Computer Science &amp; Engineering</div>
+                <div class="contributor-inst">Institute of Engineering &amp; Management (IEM), Kolkata</div>
+                <div class="contributor-details">Cryptographic Evaluation, Validation Telemetry &amp; Empirical Data Analysis</div>
+              </div>
+
+              <!-- Faculty Member -->
+              <div class="contributor-card faculty-card">
+                <div class="contributor-role-tag faculty-tag">Faculty Member &amp; Mentor</div>
+                <div class="contributor-avatar">👨‍🏫</div>
+                <div class="contributor-name">Prof. (Dr.) Indrajit De</div>
+                <div class="contributor-dept">Professor, Department of Computer Science &amp; Engineering</div>
+                <div class="contributor-inst">Institute of Engineering &amp; Management (IEM), Kolkata</div>
+                <div class="contributor-details">Research Mentorship, Theoretical Cryptography Guidance &amp; Architectural Oversight</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-block">
+            <div class="section-title">INSTITUTIONAL AFFILIATIONS &amp; PARTNERS</div>
+            <div class="affiliations-grid">
+              <div class="affiliation-card">
+                <div class="affil-logo-box">
+                  <img src="/logos/iemuem.png" alt="IEM-UEM Logo" class="affil-logo">
+                </div>
+                <div class="affil-info">
+                  <div class="affil-title">Institute of Engineering &amp; Management (IEM), Kolkata</div>
+                  <div class="affil-sub">Department of Computer Science &amp; Engineering</div>
+                </div>
+              </div>
+              <div class="affiliation-card">
+                <div class="affil-logo-box">
+                  <img src="/logos/aiori.png" alt="AIORI Logo" class="affil-logo">
+                </div>
+                <div class="affil-info">
+                  <div class="affil-title">Advanced Internet Operations Research in India (AIORI)</div>
+                  <div class="affil-sub">AIORI-3 • Domain: CyberSecurity</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-block">
+            <div class="section-title">SOLUTION OVERVIEW &amp; TECHNICAL SPECIFICATIONS</div>
+            <div class="specs-table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Component</th>
+                    <th>Specification / Configuration</th>
+                    <th>Role in PS-036 Evaluation</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>Problem Statement ID</strong></td>
+                    <td>PS-036 (Domain: CyberSecurity)</td>
+                    <td>PQC Signature Size Bloat &amp; Latency Resolution in DNSSEC</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Solution Name</strong></td>
+                    <td>RootOps PQC-DNSSEC MTL Benchmark Testbed</td>
+                    <td>Condensed Signature Merkle Tree Ladder (MTL) Architecture</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Primary PQC Algorithm</strong></td>
+                    <td>ML-DSA-44 (NIST FIPS 204) / Lab Alg 200 &amp; 201</td>
+                    <td>Post-Quantum Zone Signing Key (ZSK) across Root, TLD, and SLD</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Classical KSK</strong></td>
+                    <td>ECDSA P-256 / SHA-256 (Alg 13)</td>
+                    <td>Signs only DNSKEY RRset per RFC 8624</td>
+                  </tr>
+                  <tr>
+                    <td><strong>MTL Condensation</strong></td>
+                    <td>draft-harvey-cfrg-mtl-mode-09 / draft-fregly-dnsop</td>
+                    <td>Condensed RRSIG (~190B) + 1 Root Signature per zone (~2,420B)</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Delegation Hierarchy</strong></td>
+                    <td>. (Root) → test. / lab. (TLD) → aiori3.test. (SLD)</td>
+                    <td>Fully containerized multi-tier DNSSEC delegation chain</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Authoritative Server</strong></td>
+                    <td>PowerDNS Authoritative 5.0.7 (GSQLite3 Backend)</td>
+                    <td>Presigned zone serving over UDP (1,232B cap) and TCP</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Recursive Resolver</strong></td>
+                    <td>PowerDNS Recursor 5.3.10</td>
+                    <td>Iterative resolver configured with custom lab root hints</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Validator Engine</strong></td>
+                    <td>pqcdns.validator (Python / liboqs 0.16.0)</td>
+                    <td>Client-side chain-of-trust walk from trust anchor</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div style="margin-top: 14px;">
+              <button class="btn btn-secondary" onclick="openIntroScreen()">Revisit Welcome Intro Screen</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Collapsed Terminal Expand Strip (visible when terminal is collapsed) -->
+    <div class="terminal-expand-strip" id="terminal-expand-strip" style="display: none;">
+      <button class="expand-term-btn" onclick="toggleTerminalCollapse()" title="Expand interactive terminal console to view live CLI output">
+        <span class="expand-icon">◀</span>
+        <span class="expand-label">TERMINAL</span>
+      </button>
+    </div>
+
+    <!-- Right Pane: Terminal Box & Interactive Runner -->
+    <section class="terminal-panel" id="terminal-panel">
+      <!-- Terminal Window Bar -->
+      <div class="terminal-header">
+        <div class="terminal-title">
+          <span class="term-prompt-char">$</span>
+          <span>Interactive Testbed Console</span>
+        </div>
+        <div class="terminal-controls">
+          <span class="status-indicator" id="term-status">[READY]</span>
+          <button class="term-btn term-btn-terminate" id="btn-terminate" onclick="terminateRunningProcess()" title="Immediately terminate currently running process (Kill / Ctrl+C)">⏹ Terminate</button>
+          <button class="term-btn" onclick="sendSigint()" title="Send SIGINT (Ctrl+C) to abort the running command">Interrupt (Ctrl+C)</button>
+          <button class="term-btn" onclick="clearTerminal()" title="Clear all text from the terminal viewport">Clear</button>
+          <button class="term-btn" onclick="copyTerminalText()" title="Copy all terminal output text to clipboard">Copy</button>
+          <button class="term-btn term-collapse-btn" onclick="toggleTerminalCollapse()" title="Collapse terminal panel to maximize workbench view">▶ Collapse</button>
+        </div>
+      </div>
+
+      <!-- Quick Command Bar -->
+      <div class="terminal-quick-bar">
+        <span class="quick-label">QUICK:</span>
+        <button class="quick-btn" onclick="sendCmd('./tb.sh status')" title="Run ./tb.sh status to check containers and services">status</button>
+        <button class="quick-btn" onclick="sendCmd('./tb.sh test')" title="Run ./tb.sh test to verify PQC DNSSEC resolution">test</button>
+        <button class="quick-btn" onclick="sendCmd('./tb.sh sign mtl small && ./tb.sh reload')" title="Sign zone with MTL + ML-DSA-44 and reload">sign mtl</button>
+        <button class="quick-btn" onclick="sendCmd('./tb.sh sign mldsa44 small && ./tb.sh reload')" title="Sign zone with baseline ML-DSA-44 and reload">sign mldsa44</button>
+        <button class="quick-btn" onclick="sendCmd('./tb.sh reload')" title="Reload PowerDNS authoritative zone files">reload</button>
+        <button class="quick-btn" onclick="sendCmd('./tb.sh dig +dnssec host00001.aiori3.test A')" title="Query A record for host00001.aiori3.test with +dnssec">dig host00001</button>
+        <button class="quick-btn" onclick="sendCmd('./tb.sh dig +dnssec +tcp _mtlladder.aiori3.test TXT')" title="Query TXT record for _mtlladder.aiori3.test">dig ladder TXT</button>
+        <button class="quick-btn" onclick="sendCmd('./tb.sh validate host00001.aiori3.test')" title="Validate complete trust chain for host00001.aiori3.test">validate</button>
+        <button class="quick-btn" onclick="sendCmd('./tb.sh demo-evolve')" title="Run automated zone evolution demo">demo-evolve</button>
+        <button class="quick-btn" onclick="sendCmd('./tb.sh bench-crypto 5')" title="Run offline crypto benchmark with 5 trials">bench-crypto</button>
+        <button class="quick-btn" onclick="sendCmd('./tb.sh bench-dns 5 300')" title="Run live DNS workload benchmark with 5 trials and 300 queries">bench-dns</button>
+        <button class="quick-btn" onclick="sendCmd('./tb.sh report')" title="Regenerate benchmark report and plot images">report</button>
+      </div>
+
+      <!-- xterm.js Terminal Viewport -->
+      <div id="terminal-viewport" class="terminal-viewport"></div>
+
+      <!-- Command Input Bar -->
+      <form class="terminal-input-bar" onsubmit="event.preventDefault(); submitCliInput();">
+        <span class="cli-prompt">$</span>
+        <input type="text" id="cli-input" class="cli-input" placeholder="Enter command (e.g. status, test, dig...)" autocomplete="off" spellcheck="false">
+        <button type="submit" class="btn btn-secondary cli-run-btn" title="Execute the command entered in the input field">Run</button>
+      </form>
+    </section>
+  </main>
+
+  <!-- Bottom Telemetry & Specification Footer -->
+  <footer class="app-footer">
+    <div class="footer-item"><span class="footer-label">HOST OS:</span> <span id="ft-os">Kali GNU/Linux Rolling (kernel 7.1.5)</span></div>
+    <div class="footer-item"><span class="footer-label">CPU:</span> <span id="ft-cpu">AMD Ryzen 5 3550H (4 cores)</span></div>
+    <div class="footer-item"><span class="footer-label">POWERDNS:</span> <span>Auth 5.0.7 / Recursor 5.3.10</span></div>
+    <div class="footer-item"><span class="footer-label">PQC STACK:</span> <span>liboqs 0.16.0 / ML-DSA-44 (Alg 200, 201)</span></div>
+    <div class="footer-item"><span class="footer-label">DOCKER:</span> <span id="ft-docker">28.5.2 / Compose 2.40.3</span></div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="/vendor/xterm.min.js"></script>
+  <script src="/vendor/xterm-addon-fit.min.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+# PowerDNS Recursor 5.3.x - lab recursive resolver (YAML settings, verified against
+# https://docs.powerdns.com/recursor/yamlsettings.html)
+incoming:
+  listen: [0.0.0.0]
+  allow_from: [172.30.53.0/24, 127.0.0.0/8]
+outgoing:
+  dont_query: []              # the lab lives in RFC1918 space: MUST be allowed (default blocks it)
+  edns_bufsize: 1232          # DNS Flag Day 2020 value; larger PQC answers -> TC=1 -> TCP
+  max_bytesperq: 10000000     # 5.3.5+ caps bytes per client query at 100 kB; don't bias PQC runs
+recursor:
+  hint_file: /etc/powerdns/lab-root.hints   # generated from IANA named.root -> lab root server
+  setuid: pdns
+  setgid: pdns
+dnssec:
+  # Fetch/cache/serve RRSIG+DNSKEY+DS+NSEC (DO=1 upstream) but do NOT validate:
+  # PowerDNS has no ML-DSA / MTL implementation. The PQC chain is validated by
+  # pqcdns.validator in the client container (no resolver written from scratch).
+  validation: process-no-validate
+logging:
+  loglevel: 5
+webservice:
+  webserver: true
+  address: 0.0.0.0
+  port: 8082
+  allow_from: [172.30.53.0/24, 127.0.0.0/8]
+  api_key: labkey

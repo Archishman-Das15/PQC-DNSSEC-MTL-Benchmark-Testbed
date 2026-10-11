@@ -1,0 +1,105 @@
+# PS-036 PQC DNSSEC MTL testbed - every component in its own container.
+#
+#   client (172.30.53.100) --> resolver (PowerDNS Recursor, .53)
+#                                 |  iterative resolution from lab root hints
+#                                 v
+#         root  "."   (PowerDNS Auth, .10)  --delegates-->  test.
+#         tld   test. (PowerDNS Auth, .20)  --delegates-->  aiori3.test.
+#         sld   aiori3.test. (PowerDNS Auth, .30)
+#
+name: pqcmtl
+x-auth: &auth
+  build: { context: docker/auth, args: { PDNS_AUTH_REPO: "${PDNS_AUTH_REPO:-auth-50}" } }
+  image: pqcmtl/pdns-auth:${PDNS_AUTH_REPO:-auth-50}
+  restart: unless-stopped
+  cpuset: "${AUTH_CPUS:-1}"
+  volumes: [ "${HOST_DIR:-.}/zones:/zones:ro" ]
+x-tools: &tools
+  build: { context: ., dockerfile: docker/tools/Dockerfile }
+  image: pqcmtl/tools:latest
+
+services:
+  root:
+    <<: *auth
+    hostname: a.root-servers.lab
+    environment: { ZONE_NAME: ".", ZONE_FILE: /zones/root.zone }
+    networks: { labnet: { ipv4_address: 172.30.53.10 } }
+  tld-lab:
+    <<: *auth
+    hostname: ns1.nic.test
+    environment: { ZONE_NAME: "test", ZONE_FILE: /zones/test.zone }
+    networks: { labnet: { ipv4_address: 172.30.53.20 } }
+  sld-aiori:
+    <<: *auth
+    container_name: pqcmtl-sld-aiori-1
+    hostname: ns1.aiori3.test
+    environment: { ZONE_NAME: "aiori3.test", ZONE_FILE: /zones/aiori3.test.zone }
+    networks: { labnet: { ipv4_address: 172.30.53.30 } }
+
+  resolver:
+    build: { context: docker/recursor, args: { PDNS_REC_REPO: "${PDNS_REC_REPO:-rec-53}" } }
+    image: pqcmtl/pdns-recursor:${PDNS_REC_REPO:-rec-53}
+    hostname: resolver.lab
+    restart: unless-stopped
+    cpuset: "${RESOLVER_CPUS:-2}"
+    volumes: [ "${HOST_DIR:-.}/config/lab-root.hints:/etc/powerdns/lab-root.hints:ro" ]
+    depends_on: [ root, tld-lab, sld-aiori ]
+    networks: { labnet: { ipv4_address: 172.30.53.53 } }
+
+  client:
+    <<: *tools
+    hostname: client.lab
+    restart: unless-stopped
+    cpuset: "${CLIENT_CPUS:-3}"
+    environment:
+      RESOLVER_IP: 172.30.53.53
+      TRUST_ANCHOR: /zones/root.anchor
+      ZONES_DIR: /zones
+      RESULTS_DIR: /results
+      BENCH_CPU: "${CLIENT_CPUS:-3}"
+    # point the stub resolver at the lab recursor (not Docker's embedded DNS)
+    command: [ "sh", "-c", "echo 'nameserver 172.30.53.53' > /etc/resolv.conf; exec sleep infinity" ]
+    volumes:
+      - "${HOST_DIR:-.}/zones:/zones:ro"
+      - "${HOST_DIR:-.}/results:/results"
+      - "${HOST_DIR:-.}/pqcdns:/opt/pqcdns/pqcdns:ro"
+    depends_on: [ resolver ]
+    networks: { labnet: { ipv4_address: 172.30.53.100 } }
+
+  # one-shot tool container: signing, offline benchmarks, report (docker compose run --rm tools ...)
+  tools:
+    <<: *tools
+    profiles: [ "tools" ]
+    cpuset: "${BENCH_CPUS:-3}"
+    environment:
+      BENCH_CPU: "${BENCH_CPUS:-3}"
+      RESULTS_DIR: /results
+    working_dir: /work
+    volumes:
+      - "${HOST_DIR:-.}/:/work"
+      - "${HOST_DIR:-.}/pqcdns:/opt/pqcdns/pqcdns:ro"
+    network_mode: bridge
+
+  ui:
+    build: { context: ., dockerfile: docker/ui/Dockerfile }
+    image: pqcmtl/ui:latest
+    container_name: pqcmtl-ui
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - "${HOST_DIR:-.}/:/work"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "/usr/libexec/docker/cli-plugins:/usr/libexec/docker/cli-plugins:ro"
+    environment:
+      PORT: "8080"
+      HOST: "0.0.0.0"
+      HOST_DIR: "${HOST_DIR:-}"
+    networks:
+      labnet:
+        ipv4_address: 172.30.53.80
+
+networks:
+  labnet:
+    driver: bridge
+    ipam: { config: [ { subnet: 172.30.53.0/24 } ] }

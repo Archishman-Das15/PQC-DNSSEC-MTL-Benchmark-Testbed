@@ -1,0 +1,20 @@
+{
+  "captured_at_utc": "2026-10-09T08:13:31Z",
+  "host_os": "Debian GNU/Linux 12 (bookworm)",
+  "kernel": "7.1.5+kali-amd64",
+  "cpu_model": "AMD Ryzen 5 3550H with Radeon Vega Mobile Gfx",
+  "cpu_count": "4",
+  "memory_total": "7.8Gi",
+  "cpu_governor": "n/a",
+  "turbo_disabled_or_boost": "n/a",
+  "docker": "28.5.2+dfsg4",
+  "docker_compose": "2.40.3-3",
+  "cpuset_auth": "0",
+  "cpuset_resolver": "1",
+  "cpuset_client_and_bench": "2 / 3",
+  "powerdns_auth": "PowerDNS Authoritative Server 5.0.7 (C) PowerDNS.COM BV",
+  "powerdns_recursor": "PowerDNS Recursor 5.3.10 (C) PowerDNS.COM BV",
+  "pqc_stack": "liboqs 0.16.0 liboqs-python 0.16.0.1 dnspython 2.7.0 pycryptodome 3.23.0 cryptography 46.0.6",
+  "images": "pqcmtl/ui:latest=d0a2842d4b66 pqcmtl/tools:latest=f66b5a1fde59 pqcmtl/pdns-recursor:rec-53=39529d4c0212 pqcmtl/pdns-auth:auth-50=72a11f3238fb ",
+  "testbed_git_commit": "n/a"
+}
