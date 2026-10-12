@@ -1,4 +1,4 @@
-# PS-036 — PQC DNSSEC MTL Benchmark Testbed
+# PS-036 — PQC DNSSEC MTL Benchmark Using a Reference Implmentation
 
 Benchmarks **ML-DSA-44** vs **MTL + ML-DSA-44** (Merkle Tree Ladder mode, Verisign Labs) for DNSSEC
 zone signing, on a full, containerised delegation chain: **root → test. → aiori3.test.**, a PowerDNS
@@ -262,3 +262,7 @@ No new cryptography (ML-DSA-44 = liboqs, MTL = published Verisign spec), no reso
 (isolated lab network, lab-only algorithm numbers 200/201), no security proof claimed.
 
 
+## Authors
+### Team RootOps
+Archishman Das &
+Sampurnaa Nag
