@@ -20,6 +20,11 @@ recursive resolver, and a separate client container.
 
 ---
 
+## Team Introduction
+Watch our team introduction video: [Team Introduction](https://youtu.be/YdQ5A0QAOkY?si=fYHRjw1RnPUpfmBu)
+
+---
+
 ## ⚡ Universal Quickstart (Linux: Ubuntu / Debian / Kali) — Zero Compilation
 
 The testbed is fully containerized and pre-packaged with offline Docker images (`pqc_docker_images.tar.gz`), eliminating manual C library compilation (`liboqs`) and host Python dependency installs.
